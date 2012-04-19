@@ -32,64 +32,54 @@ Features it will never have
 * Support for [.NET resource formats](http://msdn.microsoft.com/en-us/library/xbx3z216%28VS.80%29.aspx) ([RESX](http://msdn.microsoft.com/en-us/library/ekyft91f%28VS.80%29.aspx), [RESOURCES](http://msdn.microsoft.com/en-us/library/zew6azb7%28VS.80%29.aspx), or [text](http://msdn.microsoft.com/en-us/library/s9eey0h7%28VS.80%29.aspx))
 
 
-Using
------
+Using BRU
+---------
 To run BatchResourceUpdater, you can do the following:
 
-  `BatchResourceUpdater test.bru`
+    BatchResourceUpdater test.bru
 
-Where "bru" files are actually just XML files, with the following format:
+Where "bru" files are actually just XML files (so they can be double-clicked to run with BatchResourceUpdater), with the following format:
 
-`<?xml version="1.0" encoding="UTF-8" ?>
-<BatchResourceUpdate>
-  <Copy>
-    <Source>...</Source>
-    <Destination>...</Destination>
-  </Copy>
-  ...
-  <Remove>...</Remove>
-  ...
-</BatchResourceUpdate>`
+    <?xml version="1.0" encoding="UTF-8" ?>
+    <BatchResourceUpdate>
+      <Copy>
+        <Source>RESID</Source>
+        <Destination>RESID</Destination>
+      </Copy>
+      ...
+      <Remove>RESID</Remove>
+      ...
+    </BatchResourceUpdate>
 
-The `<Copy>` and `<Remove>` blocks may come in any order and any number of them.
-The source, destination, and remove values are specifications of either files
-or resource IDs, for example:
+The `<Copy>` and `<Remove>` blocks may come in any order and any number of them. The `RESID` values are specifications of either files or resource IDs, for example:
 
-File:		file1.bmp
-PE Resource:	shell32.dll|BITMAP|100|1033
-RES Resource:	rsrc.res|BITMAP|100|1033
+* File:		file1.bmp
+* PE Resource:	shell32.dll|BITMAP|100|1033
+* RES Resource:	rsrc.res|BITMAP|100|1033
 
-PE Files must have an extention of:
-	exe, dll, sys, ocx, mui, drv, cpl, efi, com, fnt, msstyles, scr, ax, acm, ime, pe
+PE Files must have an extention of: `exe, dll, sys, ocx, mui, drv, cpl, efi, com, fnt, msstyles, scr, ax, acm, ime, pe`  
+RES Files must have an extension of: `res`
 
-RES Files must have an extension of res.
+The `<Copy>` block may have more than one destination, but only one source. It also can have an "overwrite" attribute:
 
-For more examples see the examples zip file.
-
-The `<Copy>` block may have more than one destination, but only one source.
-It also can have an "overwrite" attribute:
-  `<Copy overwrite="always|never|only">`
-Default is always.
-* Always means to always overwrite the resource/file
+    <Copy overwrite="always|never|only">
+  
+* Always means to always overwrite the resource/file, this is the default
 * Never means to save the resource/file only if it does not already exist
 * Only means to save the resource/file only if it does already exist
 
 The other set of blocks that can be used is `<Var index="#">`, like so:
-  `<Var index="#">
-    <Name>...</Name>
-    ...
-  </Var>`
 
-The `#` must be an integer from 0 to 9 (inclusive).
-There may be any number of `<Name>` blocks.
-After this block, whenever a `%#` (e.g. `%1`) is used it is replaced with all of the
-values defined by the `<Name>` blocks for that index. There are some limitations
-on replacements that can be made. Also `%%` is replaced by `%`. For examples, so
-the examples zip file.
+    <Var index="#">
+      <Name>...</Name>
+      ...
+    </Var>
 
-One very convient thing to do is register BRU files with the BatchResourceUpdater
-program so that you can double click the files.
+The `#` must be an integer from 0 to 9 (inclusive). There may be any number of `<Name>` blocks.
+After this block, whenever a `%#` (e.g. `%1`) is used it is replaced with all of the values defined by the `<Name>` blocks for that index.
+There are some limitations on replacements that can be made. Also `%%` is replaced by `%`.
 
+For more examples see the examples zip file.
 
 
 [PE]: http://en.wikipedia.org/wiki/Portable_Executable
