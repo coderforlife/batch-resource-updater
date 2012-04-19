@@ -1,0 +1,47 @@
+<!-- This file is minified to schema.bin which needs to be regenerated every time this file is changed -->
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema attributeFormDefault="unqualified" elementFormDefault="qualified" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:simpleType name="overwrite">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="always"/>
+      <xs:enumeration value="never"/>
+      <xs:enumeration value="only"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="index">
+    <xs:restriction base="xs:integer">
+      <xs:minInclusive value="0"/>
+      <xs:maxInclusive value="9"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:element name="BatchResourceUpdate">
+    <xs:complexType>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+
+        <xs:element name="Var">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="Name" type="xs:string" maxOccurs="unbounded" />
+            </xs:sequence>
+            <xs:attribute name="index" type="index" use="required" />
+          </xs:complexType>
+        </xs:element>
+
+        <xs:element name="Copy">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="Source" type="xs:string" maxOccurs="1" />
+              <xs:element name="Destination" type="xs:string" maxOccurs="unbounded" />
+            </xs:sequence>
+            <xs:attribute name="overwrite" type="overwrite" default="always" />
+          </xs:complexType>
+        </xs:element>
+
+        <xs:element name="Clean" type="xs:string" />
+
+        <xs:element name="Remove" type="xs:string" />
+
+      </xs:choice>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>
