@@ -10,3 +10,10 @@
 *.lai
 *.la
 *.a
+
+# Examples and tests
+*.bru
+*.res
+*.dll
+*.exe
+test*
