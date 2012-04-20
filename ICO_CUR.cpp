@@ -1,6 +1,6 @@
 #include "ICO_CUR.h"
 
-#define RESID2WORD(ID) ((WORD)((ULONG_PTR)(ID)))
+#include "pe\uvector.h"
 
 #pragma region General Defines and Objects
 ////////////////////////////////////////////////////////////////////////////////
@@ -67,8 +67,8 @@ struct ICO_CUR_ENTRY {
 // OUT		return value is the data for the found group, and dataSize is set to it's size
 // IN_OUT	restart is the index of the group returned. If provided, the search will begin at that index.
 // All of the OUT and IN_OUT parameters are OPTIONAL (you can provide NULL if you don't care about them). 
-LPVOID findICOGroup(LPCWSTR type, LPCWSTR name, WORD lang, Rsrc *r, LPCWSTR *grpName, WORD *grpIndx, DWORD *dataSize, DWORD *restart = NULL) {
-	vector<LPCWSTR> names = r->getNames(type);
+LPVOID findICOGroup(LPCWSTR type, LPCWSTR name, WORD lang, PE::Rsrc *r, LPCWSTR *grpName, WORD *grpIndx, DWORD *dataSize, DWORD *restart = NULL) {
+	ustl::vector<LPCWSTR> names = r->getNames(type);
 	for (DWORD i = (restart ? *restart : 0); i < names.size(); i++) {
 		size_t size = 0;
 		LPVOID gdata = r->get(type, names[i], lang, &size);
@@ -92,9 +92,9 @@ LPVOID findICOGroup(LPCWSTR type, LPCWSTR name, WORD lang, Rsrc *r, LPCWSTR *grp
 }
 // Searches icon/cursor groups for ones that contain the icon/cursor given by the name/lang and returns the count.
 // Type must be RT_GROUP_ICON or RT_GROUP_CURSOR.
-DWORD countICOGroups(LPCWSTR type, LPCWSTR name, WORD lang, Rsrc *r) {
+DWORD countICOGroups(LPCWSTR type, LPCWSTR name, WORD lang, PE::Rsrc *r) {
 	DWORD count = 0;
-	vector<LPCWSTR> names = r->getNames(type);
+	ustl::vector<LPCWSTR> names = r->getNames(type);
 	for (DWORD i = 0; i < names.size(); i++) {
 		size_t size = 0;
 		LPVOID gdata = r->get(type, names[i], lang, &size);
@@ -113,8 +113,8 @@ DWORD countICOGroups(LPCWSTR type, LPCWSTR name, WORD lang, Rsrc *r) {
 	return count;
 }
 // Find the id that should be used in a particular type (it is the next available integer)
-WORD findNextAvailable(LPCWSTR type, Rsrc *r) {
-	vector<LPCWSTR> names = r->getNames(type);
+WORD findNextAvailable(LPCWSTR type, PE::Rsrc *r) {
+	ustl::vector<LPCWSTR> names = r->getNames(type);
 	WORD i;
 	for (i = 0; i < names.size(); i++) // skip all named ones
 		if (IS_INTRESOURCE(names[i])) break;
@@ -131,7 +131,7 @@ WORD findNextAvailable(LPCWSTR type, Rsrc *r) {
 ////////////////////////////////////////////////////////////////////////////////
 ///// Extract Functions
 ////////////////////////////////////////////////////////////////////////////////
-bool extractICOIndividual(LPCWSTR type, LPCWSTR name, WORD lang, LPVOID *data, size_t *size, Rsrc *r) {
+bool extractICOIndividual(LPCWSTR type, LPCWSTR name, WORD lang, LPVOID *data, size_t *size, PE::Rsrc *r) {
 	type = (type==RT_GROUP_CURSOR||type==RT_CURSOR)?RT_GROUP_CURSOR:RT_GROUP_ICON;
 
 	WORD grpIndx;
@@ -170,7 +170,7 @@ bool extractICOIndividual(LPCWSTR type, LPCWSTR name, WORD lang, LPVOID *data, s
 	return true;
 }
 
-bool extractICOGroup(LPCWSTR type, LPCWSTR name, WORD lang, LPVOID *data, size_t *size, Rsrc *r) {
+bool extractICOGroup(LPCWSTR type, LPCWSTR name, WORD lang, LPVOID *data, size_t *size, PE::Rsrc *r) {
 	UNREFERENCED_PARAMETER(name); // unreferenced parameter
 
 	type = (type==RT_GROUP_CURSOR||type==RT_CURSOR)?RT_CURSOR:RT_ICON;
@@ -236,7 +236,7 @@ bool extractICOGroup(LPCWSTR type, LPCWSTR name, WORD lang, LPVOID *data, size_t
 ////////////////////////////////////////////////////////////////////////////////
 ///// Delete Functions
 ////////////////////////////////////////////////////////////////////////////////
-bool deleteICOIndividual(LPCWSTR type, LPCWSTR name, WORD lang, Rsrc *r) {
+bool deleteICOIndividual(LPCWSTR type, LPCWSTR name, WORD lang, PE::Rsrc *r) {
 	type = (type==RT_GROUP_CURSOR||type==RT_CURSOR)?RT_GROUP_CURSOR:RT_GROUP_ICON;
 
 	for (;;) {
@@ -262,7 +262,7 @@ bool deleteICOIndividual(LPCWSTR type, LPCWSTR name, WORD lang, Rsrc *r) {
 
 	return r->remove((type == RT_GROUP_ICON ? RT_ICON : RT_CURSOR), name, lang);
 }
-bool deleteICOGroup(LPCWSTR type, LPCWSTR name, WORD lang, Rsrc *r) {
+bool deleteICOGroup(LPCWSTR type, LPCWSTR name, WORD lang, PE::Rsrc *r) {
 	type = (type==RT_GROUP_CURSOR||type==RT_CURSOR)?RT_CURSOR:RT_ICON;
 
 	LPWSTR type2 = type == RT_ICON ? RT_GROUP_ICON : RT_GROUP_CURSOR;
@@ -289,7 +289,7 @@ bool deleteICOGroup(LPCWSTR type, LPCWSTR name, WORD lang, Rsrc *r) {
 ////////////////////////////////////////////////////////////////////////////////
 ///// Add Functions
 ////////////////////////////////////////////////////////////////////////////////
-bool addICOIndividual(LPCWSTR type, LPCWSTR name, WORD lang, LPVOID data, Rsrc *r, DWORD overwrite) {
+bool addICOIndividual(LPCWSTR type, LPCWSTR name, WORD lang, LPVOID data, PE::Rsrc *r, DWORD overwrite) {
 	type = (type==RT_GROUP_CURSOR||type==RT_CURSOR)?RT_GROUP_CURSOR:RT_GROUP_ICON;
 
 	if (!IS_INTRESOURCE(name)) {
@@ -356,7 +356,7 @@ bool addICOIndividual(LPCWSTR type, LPCWSTR name, WORD lang, LPVOID data, Rsrc *
 
 	return b;
 }
-bool addICOGroup(LPCWSTR type, LPCWSTR name, WORD lang, LPVOID data, Rsrc *r, DWORD overwrite) {
+bool addICOGroup(LPCWSTR type, LPCWSTR name, WORD lang, LPVOID data, PE::Rsrc *r, DWORD overwrite) {
 	type = (type==RT_GROUP_CURSOR||type==RT_CURSOR)?RT_CURSOR:RT_ICON;
 	LPWSTR type2 = type==RT_ICON ? RT_GROUP_ICON : RT_GROUP_CURSOR;
 

@@ -4,7 +4,7 @@
 template<typename T> __forceinline T *as_native(array<T> ^a) { pin_ptr<T> p = &a[0]; return p; }
 #define NATIVE(a) as_native(a), a->Length
 template<typename T>
-static array<T> ^to_managed(T *a, size_t l) { array<T> ^m = gcnew array<T>(l); System::Runtime::InteropServices::Marshal::Copy((System::IntPtr)a, m, 0, l); return m; }
+static array<T> ^to_managed(T *a, size_t l) { array<T> ^m = gcnew array<T>((int)l); System::Runtime::InteropServices::Marshal::Copy((System::IntPtr)a, m, 0, (int)l); return m; }
 
 #include <vcclr.h>
 __forceinline const wchar_t *as_native(System::String ^s) { pin_ptr<const wchar_t> p = PtrToStringChars(s); return p; }

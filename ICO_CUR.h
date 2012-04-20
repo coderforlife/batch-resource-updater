@@ -4,19 +4,19 @@
 
 #pragma once
 
-#include "PEFile.h"
+#include "pe\PEFile.h"
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
 // Extract icons/cursors from a PE-resource
-bool extractICOIndividual(LPCWSTR type, LPCWSTR name, WORD lang, LPVOID *data, size_t *size, Rsrc *r);
-bool extractICOGroup(LPCWSTR type, LPCWSTR name, WORD lang, LPVOID *data, size_t *size, Rsrc *r);
+bool extractICOIndividual(LPCWSTR type, LPCWSTR name, WORD lang, LPVOID *data, size_t *size, PE::Rsrc *r);
+bool extractICOGroup(LPCWSTR type, LPCWSTR name, WORD lang, LPVOID *data, size_t *size, PE::Rsrc *r);
 
 // Delete icons/cursors from a PE-resource
-bool deleteICOIndividual(LPCWSTR type, LPCWSTR name, WORD lang, Rsrc *r);
-bool deleteICOGroup(LPCWSTR type, LPCWSTR name, WORD lang, Rsrc *r);
+bool deleteICOIndividual(LPCWSTR type, LPCWSTR name, WORD lang, PE::Rsrc *r);
+bool deleteICOGroup(LPCWSTR type, LPCWSTR name, WORD lang, PE::Rsrc *r);
 
 // Add icons/cursors to a PE-resource
-bool addICOIndividual(LPCWSTR type, LPCWSTR name, WORD lang, LPVOID data, Rsrc *r, DWORD overwrite = OVERWRITE_ALWAYS);
-bool addICOGroup(LPCWSTR type, LPCWSTR name, WORD lang, LPVOID data, Rsrc *r, DWORD overwrite = OVERWRITE_ALWAYS);
+bool addICOIndividual(LPCWSTR type, LPCWSTR name, WORD lang, LPVOID data, PE::Rsrc *r, DWORD overwrite = OVERWRITE_ALWAYS);
+bool addICOGroup(LPCWSTR type, LPCWSTR name, WORD lang, LPVOID data, PE::Rsrc *r, DWORD overwrite = OVERWRITE_ALWAYS);

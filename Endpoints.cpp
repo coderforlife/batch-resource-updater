@@ -1,7 +1,7 @@
 #include "Endpoints.h"
 
 #include "general.h"
-#include "PEFile.h"
+#include "pe\PEFile.h"
 #include "ICO_CUR.h"
 
 using namespace System;
@@ -87,8 +87,8 @@ void Files::Add(String ^spec, void *data, size_t size, int overwrite) {
 	if (Directory::Exists(spec) || !shouldSave(File::Exists(spec), overwrite)) {
 		throw gcnew UnauthorizedAccessException(L"Could not overwrite file");
 	}
-	array<unsigned char> ^bytes = gcnew array<unsigned char>(size);
-	Runtime::InteropServices::Marshal::Copy(IntPtr(data), bytes, 0, size);
+	array<unsigned char> ^bytes = gcnew array<unsigned char>((int)size);
+	Runtime::InteropServices::Marshal::Copy(IntPtr(data), bytes, 0, (int)size);
 	Directory::CreateDirectory(Path::GetDirectoryName(spec));
 	File::WriteAllBytes(spec, bytes);
 }
@@ -115,7 +115,7 @@ bool extractBitmap(LPVOID *data, size_t *size) {
 	*size += sizeof(BITMAPFILEHEADER);
 	// need to add bitmap header
 	// type="BM", size now includes header, and the bitmap starts at offset 54 (14 + second header size which is usually 40 (this should be checked))
-	BITMAPFILEHEADER bmp = {0x4D42, *size+sizeof(BITMAPFILEHEADER), 0, 0, 54};
+	BITMAPFILEHEADER bmp = {0x4D42, (int)(*size+sizeof(BITMAPFILEHEADER)), 0, 0, 54};
 	memcpy(d, &bmp, sizeof(BITMAPFILEHEADER));
 	return true;
 }
@@ -127,9 +127,9 @@ PEFiles::PEFiles() {
 }
 void *PEFiles::GetPEFile(String ^filename) {
 	if (peFiles->ContainsKey(filename)) {
-		return (PEFile*)peFiles[filename].ToPointer();
+		return (PE::File*)peFiles[filename].ToPointer();
 	}
-	PEFile *peFile = new PEFile(as_native(filename));
+	PE::File *peFile = new PE::File(as_native(filename));
 	if (!peFile->isLoaded()) {
 		ReportLastError(L"Opening PE File: ");
 		delete peFile;
@@ -153,13 +153,13 @@ bool PEFiles::IsSpec(String ^spec) {
 void PEFiles::Add(String ^spec, void *data, size_t size, int overwrite) {
 	if (!IsSpec(spec)) { throw gcnew InvalidOperationException(L"Invalid PE file specification"); }
 	array<String^> ^parts = spec->Split(L'|');
-	PEFile *peFile = (PEFile*)GetPEFile(parts[0]);
+	PE::File *peFile = (PE::File*)GetPEFile(parts[0]);
 	if (!peFile) { return; }
 	LPCWSTR type = getBuiltInResourceType(parts[1]);
 	LPCWSTR name = convertToId(parts[2]);
 	WORD lang = UInt16::Parse(parts[3]);
 
-	Rsrc *res = peFile->getResources();
+	PE::Rsrc *res = peFile->getResources();
 	bool b;
 	if (type == RT_BITMAP) { // need to remove 14 byte bitmap header
 		b = res->add(type, name, lang, ((BYTE*)data)+14, size-14, overwrite);
@@ -178,14 +178,14 @@ void PEFiles::Add(String ^spec, void *data, size_t size, int overwrite) {
 void *PEFiles::Get(String ^spec, size_t *size) {
 	if (!IsSpec(spec)) { throw gcnew InvalidOperationException(L"Invalid PE file specification"); }
 	array<String^> ^parts = spec->Split(L'|');
-	PEFile *peFile = (PEFile*)GetPEFile(parts[0]);
+	PE::File *peFile = (PE::File*)GetPEFile(parts[0]);
 	if (!peFile) { return NULL; }
 	LPCWSTR type = getBuiltInResourceType(parts[1]);
 	LPCWSTR name = convertToId(parts[2]);
 	WORD lang = UInt16::Parse(parts[3]);
 
 	bool b = false;
-	Rsrc *res = peFile->getResources();
+	PE::Rsrc *res = peFile->getResources();
 	void *data = res->get(type, name, lang, size);
 	if (data) {
 		if (type == RT_BITMAP) {
@@ -207,15 +207,15 @@ void *PEFiles::Get(String ^spec, size_t *size) {
 void PEFiles::Remove(String ^spec) {
 	if (!IsSpec(spec)) { throw gcnew InvalidOperationException(L"Invalid PE file specification"); }
 	array<String^> ^parts = spec->Split(L'|');
-	PEFile *peFile = (PEFile*)GetPEFile(parts[0]);
+	PE::File *peFile = (PE::File*)GetPEFile(parts[0]);
 	if (!peFile) { return; }
 	LPCWSTR type = getBuiltInResourceType(parts[1]);
 	LPCWSTR name = convertToId(parts[2]);
 	WORD lang = UInt16::Parse(parts[3]);
 
 	bool b = false;
-	Rsrc *res = peFile->getResources();
-	 if (type == RT_ICON || type == RT_CURSOR)
+	PE::Rsrc *res = peFile->getResources();
+	if (type == RT_ICON || type == RT_CURSOR)
 		b = deleteICOIndividual(type, name, lang, res);
 	else if (type == RT_GROUP_ICON || type == RT_GROUP_CURSOR)
 		b = deleteICOGroup(type, name, lang, res);
@@ -230,7 +230,7 @@ void PEFiles::Remove(String ^spec) {
 void PEFiles::Commit() {
 	for each (KeyValuePair<String^, IntPtr> ^kv in peFiles) {
 		String ^filename = kv->Key;
-		PEFile *peFile = (PEFile*)kv->Value.ToPointer();
+		PE::File *peFile = (PE::File*)kv->Value.ToPointer();
 		if (edited[filename]) {
 			if (!peFile->save())
 				ReportLastError(L"Closing PE File: ");
@@ -251,14 +251,14 @@ RESFiles::RESFiles() {
 }
 void *RESFiles::GetRESFile(String ^filename) {
 	if (resFiles->ContainsKey(filename)) {
-		return (Rsrc*)resFiles[filename].ToPointer();
+		return (PE::Rsrc*)resFiles[filename].ToPointer();
 	}
-	Rsrc *resFile;
+	PE::Rsrc *resFile;
 	if (File::Exists(filename)) {
 		array<unsigned char> ^bytes = File::ReadAllBytes(filename);
-		resFile = Rsrc::createFromRESFile(NATIVE(bytes));
+		resFile = PE::Rsrc::createFromRESFile(NATIVE(bytes));
 	} else {
-		resFile = Rsrc::createEmpty();
+		resFile = PE::Rsrc::createEmpty();
 	}
 	if (resFile == NULL) {
 		ReportLastError(L"Opening RES File: ");
@@ -276,7 +276,7 @@ bool RESFiles::IsSpec(String ^spec) {
 void RESFiles::Add(String ^spec, void *data, size_t size, int overwrite) {
 	if (!IsSpec(spec)) { throw gcnew InvalidOperationException(L"Invalid PE file specification"); }
 	array<String^> ^parts = spec->Split(L'|');
-	Rsrc *res = (Rsrc*)GetRESFile(parts[0]);
+	PE::Rsrc *res = (PE::Rsrc*)GetRESFile(parts[0]);
 	if (!res) { return; }
 	LPCWSTR type = getBuiltInResourceType(parts[1]);
 	LPCWSTR name = convertToId(parts[2]);
@@ -300,7 +300,7 @@ void RESFiles::Add(String ^spec, void *data, size_t size, int overwrite) {
 void *RESFiles::Get(String ^spec, size_t *size) {
 	if (!IsSpec(spec)) { throw gcnew InvalidOperationException(L"Invalid PE file specification"); }
 	array<String^> ^parts = spec->Split(L'|');
-	Rsrc *res = (Rsrc*)GetRESFile(parts[0]);
+	PE::Rsrc *res = (PE::Rsrc*)GetRESFile(parts[0]);
 	if (!res) { return NULL; }
 	LPCWSTR type = getBuiltInResourceType(parts[1]);
 	LPCWSTR name = convertToId(parts[2]);
@@ -328,7 +328,7 @@ void *RESFiles::Get(String ^spec, size_t *size) {
 void RESFiles::Remove(String ^spec) {
 	if (!IsSpec(spec)) { throw gcnew InvalidOperationException(L"Invalid PE file specification"); }
 	array<String^> ^parts = spec->Split(L'|');
-	Rsrc *res = (Rsrc*)GetRESFile(parts[0]);
+	PE::Rsrc *res = (PE::Rsrc*)GetRESFile(parts[0]);
 	if (!res) { return; }
 	LPCWSTR type = getBuiltInResourceType(parts[1]);
 	LPCWSTR name = convertToId(parts[2]);
@@ -350,7 +350,7 @@ void RESFiles::Remove(String ^spec) {
 void RESFiles::Commit() {
 	for each (KeyValuePair<String^, IntPtr> ^kv in resFiles) {
 		String ^filename = kv->Key;
-		Rsrc *resFile = (Rsrc*)kv->Value.ToPointer();
+		PE::Rsrc *resFile = (PE::Rsrc*)kv->Value.ToPointer();
 		if (edited[filename]) {
 			size_t size;
 			LPVOID data = resFile->compileRES(&size);
