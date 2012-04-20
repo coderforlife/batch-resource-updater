@@ -6,6 +6,9 @@
 
 #include "PEFile.h"
 
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+
 // Extract icons/cursors from a PE-resource
 bool extractICOIndividual(LPCWSTR type, LPCWSTR name, WORD lang, LPVOID *data, size_t *size, Rsrc *r);
 bool extractICOGroup(LPCWSTR type, LPCWSTR name, WORD lang, LPVOID *data, size_t *size, Rsrc *r);

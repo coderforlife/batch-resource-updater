@@ -1,5 +1,7 @@
 #include "ICO_CUR.h"
 
+#define RESID2WORD(ID) ((WORD)((ULONG_PTR)(ID)))
+
 #pragma region General Defines and Objects
 ////////////////////////////////////////////////////////////////////////////////
 ///// General Defines and Objects
@@ -78,7 +80,7 @@ LPVOID findICOGroup(LPCWSTR type, LPCWSTR name, WORD lang, Rsrc *r, LPCWSTR *grp
 			if (MAKEINTRESOURCE(entries[j].wID) == name) {
 				if (grpName)	*grpName = names[i];
 				if (grpIndx)	*grpIndx = j;
-				if (dataSize)	*dataSize = size;
+				if (dataSize)	*dataSize = (DWORD)size;
 				if (restart)	*restart = i;
 				return gdata;
 			}
@@ -119,9 +121,9 @@ WORD findNextAvailable(LPCWSTR type, Rsrc *r) {
 	if (i == names.size() || names[i] != MAKEINTRESOURCE(1)) // see if there are no numbers or does not start with 1
 		return 1;
 	for (; i < names.size()-1; i++) // find any gaps in numbering
-		if (((WORD)names[i])+1 != ((WORD)names[i+1]))
-			return ((WORD)names[i])+1;
-	return ((WORD)names[i])+1; // return one above the highest value
+		if (RESID2WORD(names[i])+1 != RESID2WORD(names[i+1]))
+			return RESID2WORD(names[i])+1;
+	return RESID2WORD(names[i])+1; // return one above the highest value
 }
 #pragma endregion
 
@@ -169,7 +171,7 @@ bool extractICOIndividual(LPCWSTR type, LPCWSTR name, WORD lang, LPVOID *data, s
 }
 
 bool extractICOGroup(LPCWSTR type, LPCWSTR name, WORD lang, LPVOID *data, size_t *size, Rsrc *r) {
-	(name); // unreferenced parameter
+	UNREFERENCED_PARAMETER(name); // unreferenced parameter
 
 	type = (type==RT_GROUP_CURSOR||type==RT_CURSOR)?RT_CURSOR:RT_ICON;
 
@@ -195,7 +197,7 @@ bool extractICOGroup(LPCWSTR type, LPCWSTR name, WORD lang, LPVOID *data, size_t
 		ICO_CUR_ENTRY entry = *(ICO_CUR_ENTRY*)(entries+i);
 		size_t temp_size;
 		LPVOID img_orig = r->get(type, MAKEINTRESOURCE(entries[i].wID), lang, &temp_size), img = img_orig;
-		entry.dwSize = temp_size;
+		entry.dwSize = (DWORD)temp_size;
 
 		// some extra processing is required for cursors
 		if (type == RT_CURSOR) {
@@ -310,7 +312,7 @@ bool addICOIndividual(LPCWSTR type, LPCWSTR name, WORD lang, LPVOID data, Rsrc *
 	ICO_CUR_ENTRY *entry = (ICO_CUR_ENTRY*)((LPBYTE)data+sizeof(ICO_CUR_HEADER));
 
 	ICO_CUR_RT_ENTRY rt = *(ICO_CUR_RT_ENTRY*)(entry);
-	rt.wID = (WORD)name;
+	rt.wID = RESID2WORD(name);
 
 	// some extra processing is required for cursors
 	if (type == RT_GROUP_CURSOR) {
