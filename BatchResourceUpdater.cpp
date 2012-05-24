@@ -1,3 +1,19 @@
+// BatchResourceUpdater: program for automated reading, writing, and removing resources from pe-files
+// Copyright (C) 2012  Jeffrey Bush  jeff@coderforlife.com
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 // This is the source code file for the entry point into the program
 // This reads the BRU/XML file, utilizing vars and endpoints to do most of the actual work
 
@@ -19,6 +35,13 @@ void copy(Vars ^vars, Endpoint ^endpoint, XmlElement ^node);
 void remove(Vars ^vars, Endpoint ^endpoint, XmlElement ^node);
 
 int main(array<System::String ^> ^args) {
+	Console::WriteLine(L"BatchResourceUpdater Copyright (C) 2012  Jeffrey Bush <jeff@coderforlife.com>");
+	Console::WriteLine(L"This program comes with ABSOLUTELY NO WARRANTY;");
+	Console::WriteLine(L"This is free software, and you are welcome to redistribute it");
+	Console::WriteLine(L"under certain conditions;");
+	Console::WriteLine(L"See http://www.gnu.org/licenses/gpl.html for more details.");
+	Console::WriteLine();
+
 	// Check argument
 	if (args->Length < 1) {
 		Console::Error->WriteLine(L"You must supply an BRU/XML file on the command line.");
@@ -92,9 +115,9 @@ void copy(Vars ^vars, Endpoint ^endpoint, XmlElement ^node) {
 
 	// Get the overwrite setting
 	String ^ow = node->GetAttribute(L"overwrite");
-	int overwrite = OVERWRITE_ALWAYS;
+	PE::Overwrite overwrite = PE::ALWAYS;
 	if (ow != nullptr)
-		overwrite = (ow == L"never" ? OVERWRITE_NEVER : (ow == L"only" ? OVERWRITE_ONLY : OVERWRITE_ALWAYS));
+		overwrite = (ow == L"never" ? PE::NEVER : (ow == L"only" ? PE::ONLY : PE::ALWAYS));
 
 	for each (KeyValuePair<String^, List<String^>^> ^ kv in files) {
 		// Get the source data

@@ -1,4 +1,22 @@
+// BatchResourceUpdater: program for automated reading, writing, and removing resources from pe-files
+// Copyright (C) 2012  Jeffrey Bush  jeff@coderforlife.com
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 #pragma once
+
+#include "PE\PEDataTypes.h"
 
 // Interop
 template<typename T> __forceinline T *as_native(array<T> ^a) { pin_ptr<T> p = &a[0]; return p; }
@@ -11,12 +29,8 @@ __forceinline const wchar_t *as_native(System::String ^s) { pin_ptr<const wchar_
 __forceinline System::String ^as_managed(wchar_t *s) { return System::Runtime::InteropServices::Marshal::PtrToStringUni((System::IntPtr)s); }
 
 
-#define OVERWRITE_ALWAYS	0	//always adds the resource, even if it already exists
-#define OVERWRITE_NEVER		1	//only adds a resource is it does not already exist
-#define OVERWRITE_ONLY		2	//only adds a resource if it will overwrite another resource
-
 // Looks if a file should be saved, given if it exists and the desire to overwrite
-bool shouldSave(bool exists, int overwrite);
+bool shouldSave(bool exists, PE::Overwrite overwrite);
 
 // Converts a managed System::String to a wide-character string. The returned string needs to be deleted with delete[].
 //LPWSTR toLPWSTR(System::String ^s);

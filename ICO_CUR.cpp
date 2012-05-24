@@ -1,6 +1,22 @@
+// BatchResourceUpdater: program for automated reading, writing, and removing resources from pe-files
+// Copyright (C) 2012  Jeffrey Bush  jeff@coderforlife.com
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 #include "ICO_CUR.h"
 
-#include "pe\uvector.h"
+#include <vector>
 
 #pragma region General Defines and Objects
 ////////////////////////////////////////////////////////////////////////////////
@@ -68,7 +84,7 @@ struct ICO_CUR_ENTRY {
 // IN_OUT	restart is the index of the group returned. If provided, the search will begin at that index.
 // All of the OUT and IN_OUT parameters are OPTIONAL (you can provide NULL if you don't care about them). 
 LPVOID findICOGroup(LPCWSTR type, LPCWSTR name, WORD lang, PE::Rsrc *r, LPCWSTR *grpName, WORD *grpIndx, DWORD *dataSize, DWORD *restart = NULL) {
-	ustl::vector<LPCWSTR> names = r->getNames(type);
+	std::vector<LPCWSTR> names = r->getNames(type);
 	for (DWORD i = (restart ? *restart : 0); i < names.size(); i++) {
 		size_t size = 0;
 		LPVOID gdata = r->get(type, names[i], lang, &size);
@@ -94,7 +110,7 @@ LPVOID findICOGroup(LPCWSTR type, LPCWSTR name, WORD lang, PE::Rsrc *r, LPCWSTR 
 // Type must be RT_GROUP_ICON or RT_GROUP_CURSOR.
 DWORD countICOGroups(LPCWSTR type, LPCWSTR name, WORD lang, PE::Rsrc *r) {
 	DWORD count = 0;
-	ustl::vector<LPCWSTR> names = r->getNames(type);
+	std::vector<LPCWSTR> names = r->getNames(type);
 	for (DWORD i = 0; i < names.size(); i++) {
 		size_t size = 0;
 		LPVOID gdata = r->get(type, names[i], lang, &size);
@@ -114,16 +130,16 @@ DWORD countICOGroups(LPCWSTR type, LPCWSTR name, WORD lang, PE::Rsrc *r) {
 }
 // Find the id that should be used in a particular type (it is the next available integer)
 WORD findNextAvailable(LPCWSTR type, PE::Rsrc *r) {
-	ustl::vector<LPCWSTR> names = r->getNames(type);
+	std::vector<LPCWSTR> names = r->getNames(type);
 	WORD i;
 	for (i = 0; i < names.size(); i++) // skip all named ones
 		if (IS_INTRESOURCE(names[i])) break;
 	if (i == names.size() || names[i] != MAKEINTRESOURCE(1)) // see if there are no numbers or does not start with 1
 		return 1;
 	for (; i < names.size()-1; i++) // find any gaps in numbering
-		if (RESID2WORD(names[i])+1 != RESID2WORD(names[i+1]))
-			return RESID2WORD(names[i])+1;
-	return RESID2WORD(names[i])+1; // return one above the highest value
+		if (PE::ResID2Int(names[i])+1 != PE::ResID2Int(names[i+1]))
+			return PE::ResID2Int(names[i])+1;
+	return PE::ResID2Int(names[i])+1; // return one above the highest value
 }
 #pragma endregion
 
@@ -255,7 +271,7 @@ bool deleteICOIndividual(LPCWSTR type, LPCWSTR name, WORD lang, PE::Rsrc *r) {
 		} else {
 			for (WORD i = grpIndx; i < header->wNumImages; i++)
 				entries[i] = entries[i+1];
-			r->add(type, grpName, lang, gdata, size, OVERWRITE_ONLY);
+			r->add(type, grpName, lang, gdata, size, PE::ONLY);
 		}
 		free(gdata);
 	}
@@ -289,7 +305,7 @@ bool deleteICOGroup(LPCWSTR type, LPCWSTR name, WORD lang, PE::Rsrc *r) {
 ////////////////////////////////////////////////////////////////////////////////
 ///// Add Functions
 ////////////////////////////////////////////////////////////////////////////////
-bool addICOIndividual(LPCWSTR type, LPCWSTR name, WORD lang, LPVOID data, PE::Rsrc *r, DWORD overwrite) {
+bool addICOIndividual(LPCWSTR type, LPCWSTR name, WORD lang, LPVOID data, PE::Rsrc *r, PE::Overwrite overwrite) {
 	type = (type==RT_GROUP_CURSOR||type==RT_CURSOR)?RT_GROUP_CURSOR:RT_GROUP_ICON;
 
 	if (!IS_INTRESOURCE(name)) {
@@ -299,9 +315,9 @@ bool addICOIndividual(LPCWSTR type, LPCWSTR name, WORD lang, LPVOID data, PE::Rs
 	
 	bool exists = r->exists(type, name, lang);
 	if (exists) {
-		if (overwrite == OVERWRITE_NEVER)
+		if (overwrite == PE::NEVER)
 			return false;
-	} else if (overwrite == OVERWRITE_ONLY)
+	} else if (overwrite == PE::ONLY)
 		return false;
 	DWORD nGroups = exists ? countICOGroups(type, name, lang, r) : 0;
 
@@ -312,7 +328,7 @@ bool addICOIndividual(LPCWSTR type, LPCWSTR name, WORD lang, LPVOID data, PE::Rs
 	ICO_CUR_ENTRY *entry = (ICO_CUR_ENTRY*)((LPBYTE)data+sizeof(ICO_CUR_HEADER));
 
 	ICO_CUR_RT_ENTRY rt = *(ICO_CUR_RT_ENTRY*)(entry);
-	rt.wID = RESID2WORD(name);
+	rt.wID = PE::ResID2Int(name);
 
 	// some extra processing is required for cursors
 	if (type == RT_GROUP_CURSOR) {
@@ -340,7 +356,7 @@ bool addICOIndividual(LPCWSTR type, LPCWSTR name, WORD lang, LPVOID data, PE::Rs
 			LPBYTE gdata = (LPBYTE)findICOGroup(type, name, lang, r, &grpName, &grpIndx, &dataSize, &restart);
 			if (gdata) {
 				memcpy(gdata+sizeof(ICO_CUR_HEADER)+grpIndx*sizeof(ICO_CUR_RT_ENTRY), &rt, sizeof(ICO_CUR_RT_ENTRY));
-				b = r->add(type, grpName, lang, gdata, dataSize, OVERWRITE_ONLY);
+				b = r->add(type, grpName, lang, gdata, dataSize, PE::ONLY);
 				free(gdata);
 			}
 		}
@@ -350,20 +366,20 @@ bool addICOIndividual(LPCWSTR type, LPCWSTR name, WORD lang, LPVOID data, PE::Rs
 		LPBYTE gdata = new BYTE[gdataSize];
 		memcpy(gdata, header, sizeof(ICO_CUR_HEADER));
 		memcpy(gdata+sizeof(ICO_CUR_HEADER), &rt, sizeof(ICO_CUR_RT_ENTRY));
-		b = r->add(type, MAKEINTRESOURCE(findNextAvailable(type, r)), lang, gdata, gdataSize, OVERWRITE_NEVER);
+		b = r->add(type, MAKEINTRESOURCE(findNextAvailable(type, r)), lang, gdata, gdataSize, PE::NEVER);
 		delete[] gdata;
 	}
 
 	return b;
 }
-bool addICOGroup(LPCWSTR type, LPCWSTR name, WORD lang, LPVOID data, PE::Rsrc *r, DWORD overwrite) {
+bool addICOGroup(LPCWSTR type, LPCWSTR name, WORD lang, LPVOID data, PE::Rsrc *r, PE::Overwrite overwrite) {
 	type = (type==RT_GROUP_CURSOR||type==RT_CURSOR)?RT_CURSOR:RT_ICON;
 	LPWSTR type2 = type==RT_ICON ? RT_GROUP_ICON : RT_GROUP_CURSOR;
 
 	if (r->exists(type2, name, lang)) {
-		if (overwrite == OVERWRITE_NEVER || !deleteICOGroup(type2, name, lang, r))
+		if (overwrite == PE::NEVER || !deleteICOGroup(type2, name, lang, r))
 			return false;
-	} else if (overwrite == OVERWRITE_ONLY)
+	} else if (overwrite == PE::ONLY)
 		return false;
 
 	ICO_CUR_HEADER *header = (ICO_CUR_HEADER*)data;
@@ -389,10 +405,10 @@ bool addICOGroup(LPCWSTR type, LPCWSTR name, WORD lang, LPVOID data, PE::Rsrc *r
 			LPBYTE temp = new BYTE[rt.dwSize];
 			memcpy(temp, &entry.CUR, sizeof(CUR_HOTSPOT));
 			memcpy(temp+sizeof(CUR_HOTSPOT), (LPBYTE)data+entry.dwOffset, entry.dwSize);
-			r->add(RT_CURSOR, MAKEINTRESOURCE(rt.wID), lang, temp, rt.dwSize, OVERWRITE_NEVER);
+			r->add(RT_CURSOR, MAKEINTRESOURCE(rt.wID), lang, temp, rt.dwSize, PE::NEVER);
 			delete[] temp;
 		} else {
-			r->add(RT_ICON, MAKEINTRESOURCE(rt.wID), lang, (LPBYTE)data+entry.dwOffset, entry.dwSize, OVERWRITE_NEVER);
+			r->add(RT_ICON, MAKEINTRESOURCE(rt.wID), lang, (LPBYTE)data+entry.dwOffset, entry.dwSize, PE::NEVER);
 		}
 
 		memcpy(gdata+offset, &rt, sizeof(ICO_CUR_RT_ENTRY));

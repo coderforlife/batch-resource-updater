@@ -1,3 +1,21 @@
+// BatchResourceUpdater: program for automated reading, writing, and removing resources from pe-files
+// Copyright (C) 2012  Jeffrey Bush  jeff@coderforlife.com
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+// Implements the endpoints (sources or destinations) for resource data
+
 #include "Endpoints.h"
 
 #include "general.h"
@@ -70,7 +88,7 @@ static void *DIB2IMG(LPVOID data, size_t size, size_t *out_size) { // free(), bu
 
 #pragma region Dummy (Fallback) Endpoint
 bool DummyEndpoint::IsSpec(String ^) { return true; }
-void DummyEndpoint::Add(String ^, void *, size_t, int) { throw gcnew InvalidOperationException(L"Could not understand name."); }
+void DummyEndpoint::Add(String ^, void *, size_t, PE::Overwrite) { throw gcnew InvalidOperationException(L"Could not understand name."); }
 void *DummyEndpoint::Get(String ^, size_t *) { throw gcnew InvalidOperationException(L"Could not understand name."); }
 void DummyEndpoint::Remove(String ^) { throw gcnew InvalidOperationException(L"Could not understand name."); }
 //void DummyEndpoint::Clear(String ^) { throw gcnew InvalidOperationException(L"Could not understand name."); }
@@ -81,7 +99,7 @@ void DummyEndpoint::Commit() { }
 bool Files::IsSpec(String ^spec) {
 	return spec->IndexOf(L'|') == -1 && spec->IndexOfAny(Path::GetInvalidPathChars()) == -1;
 }
-void Files::Add(String ^spec, void *data, size_t size, int overwrite) {
+void Files::Add(String ^spec, void *data, size_t size, PE::Overwrite overwrite) {
 	if (!IsSpec(spec)) { throw gcnew InvalidOperationException(L"Invalid file name"); }
 	spec = Path::GetFullPath(spec);
 	if (Directory::Exists(spec) || !shouldSave(File::Exists(spec), overwrite)) {
@@ -150,7 +168,7 @@ bool PEFiles::IsSpec(String ^spec) {
 			return true;
 	return false;
 }
-void PEFiles::Add(String ^spec, void *data, size_t size, int overwrite) {
+void PEFiles::Add(String ^spec, void *data, size_t size, PE::Overwrite overwrite) {
 	if (!IsSpec(spec)) { throw gcnew InvalidOperationException(L"Invalid PE file specification"); }
 	array<String^> ^parts = spec->Split(L'|');
 	PE::File *peFile = (PE::File*)GetPEFile(parts[0]);
@@ -273,7 +291,7 @@ bool RESFiles::IsSpec(String ^spec) {
 	array<String^> ^parts = spec->Split(L'|');
 	return parts->Length == 4 && UInt16::TryParse(parts[3], x) && parts[0]->ToLower()->EndsWith(".res");
 }
-void RESFiles::Add(String ^spec, void *data, size_t size, int overwrite) {
+void RESFiles::Add(String ^spec, void *data, size_t size, PE::Overwrite overwrite) {
 	if (!IsSpec(spec)) { throw gcnew InvalidOperationException(L"Invalid PE file specification"); }
 	array<String^> ^parts = spec->Split(L'|');
 	PE::Rsrc *res = (PE::Rsrc*)GetRESFile(parts[0]);
@@ -381,7 +399,7 @@ Endpoint ^Endpoints::GetEndpoint(System::String ^spec) {
 	return nullptr;
 }
 bool Endpoints::IsSpec(System::String ^spec) { return GetEndpoint(spec) != nullptr; }
-void Endpoints::Add(System::String ^spec, void *data, size_t size, int overwrite) { GetEndpoint(spec)->Add(spec, data, size, overwrite); }
+void Endpoints::Add(System::String ^spec, void *data, size_t size, PE::Overwrite overwrite) { GetEndpoint(spec)->Add(spec, data, size, overwrite); }
 void *Endpoints::Get(System::String ^spec, size_t *size) { return GetEndpoint(spec)->Get(spec, size); }
 void Endpoints::Remove(System::String ^spec) { GetEndpoint(spec)->Remove(spec); }
 //void Endpoints::Clean(System::String ^spec) { GetEndpoint(spec)->Clean(spec); }
